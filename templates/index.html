@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⛳ Golf Playing App</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green:   #2d6a4f;
+  --green2:  #40916c;
+  --green3:  #d8f3dc;
+  --green4:  #b7e4c7;
+  --white:   #ffffff;
+  --gray1:   #f8f9fa;
+  --gray2:   #e9ecef;
+  --gray3:   #ced4da;
+  --gray4:   #6c757d;
+  --red:     #dc3545;
+  --text:    #212529;
+  --shadow:  0 2px 12px rgba(0,0,0,0.10);
+  --radius:  12px;
+}
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray1); color: var(--text); }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: 1rem; }
+
+/* ── Login ────────────────────────────────────────────────────── */
+#login-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+}
+.login-card {
+  background: var(--white); border-radius: 20px; padding: 2.5rem 2rem;
+  width: min(380px, 92vw); box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+  text-align: center;
+}
+.login-card .logo { font-size: 3.5rem; margin-bottom: .5rem; }
+.login-card h1 { font-size: 1.5rem; color: var(--green); margin-bottom: .25rem; }
+.login-card p  { color: var(--gray4); font-size: .9rem; margin-bottom: 1.5rem; }
+.login-card input {
+  width: 100%; padding: .75rem 1rem; border: 2px solid var(--gray2);
+  border-radius: var(--radius); margin-bottom: .75rem;
+  font-size: 1rem; transition: border .2s;
+}
+.login-card input:focus { outline: none; border-color: var(--green); }
+.btn-login {
+  width: 100%; padding: .85rem; background: var(--green); color: var(--white);
+  border: none; border-radius: var(--radius); font-size: 1.05rem; font-weight: 600;
+  transition: background .2s;
+}
+.btn-login:hover { background: var(--green2); }
+.login-error { color: var(--red); font-size: .9rem; margin-top: .5rem; min-height: 1.2em; }
+
+/* ── App Shell ───────────────────────────────────────────────── */
+#app-screen { display: none; min-height: 100vh; flex-direction: column; }
+#app-screen.active { display: flex; }
+
+/* Top Bar */
+.topbar {
+  background: var(--green); color: var(--white);
+  padding: .75rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.topbar-title { font-size: 1.2rem; font-weight: 700; letter-spacing: .5px; }
+.btn-logout {
+  background: rgba(255,255,255,.15); color: var(--white); border: 1px solid rgba(255,255,255,.3);
+  border-radius: 8px; padding: .35rem .8rem; font-size: .85rem;
+}
+.btn-logout:hover { background: rgba(255,255,255,.25); }
+
+/* Tab Nav */
+.tab-nav {
+  display: flex; background: var(--white); border-bottom: 2px solid var(--gray2);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  position: sticky; top: 52px; z-index: 99;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 0 0 auto; padding: .75rem 1.25rem;
+  background: none; border: none; color: var(--gray4);
+  font-size: .9rem; font-weight: 500; white-space: nowrap;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+  transition: color .2s, border-color .2s;
+}
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); font-weight: 700; }
+.tab-btn:hover:not(.active) { color: var(--green2); }
+
+/* Content area */
+.tab-content { display: none; flex: 1; padding: 1.25rem; max-width: 900px; margin: 0 auto; width: 100%; }
+.tab-content.active { display: block; }
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.card {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 1.25rem; margin-bottom: 1rem;
+}
+.card-title { font-size: 1.05rem; font-weight: 700; color: var(--green); margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+
+/* ── Stats Grid ───────────────────────────────────────────────── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin-bottom: 1rem;
+}
+@media(min-width:600px){ .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 1rem; text-align: center;
+  border-top: 4px solid var(--green);
+}
+.stat-value { font-size: 1.8rem; font-weight: 800; color: var(--green); line-height: 1.1; }
+.stat-label { font-size: .78rem; color: var(--gray4); margin-top: .25rem; }
+
+/* ── Form ─────────────────────────────────────────────────────── */
+.form-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: .75rem;
+}
+@media(min-width:600px){ .form-grid { grid-template-columns: repeat(2, 1fr); } }
+.form-group { display: flex; flex-direction: column; gap: .3rem; }
+.form-group label { font-size: .85rem; font-weight: 600; color: var(--gray4); }
+.form-group input, .form-group select {
+  padding: .65rem .9rem; border: 2px solid var(--gray2); border-radius: 8px;
+  font-size: 1rem; transition: border .2s; background: var(--white); color: var(--text);
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--green); }
+.form-group .hint { font-size: .75rem; color: var(--gray4); }
+.form-group input[readonly] { background: var(--gray1); color: var(--gray4); }
+
+.btn-submit {
+  width: 100%; padding: .9rem; background: var(--green); color: var(--white);
+  border: none; border-radius: var(--radius); font-size: 1.05rem; font-weight: 700;
+  margin-top: .5rem; transition: background .2s;
+}
+.btn-submit:hover { background: var(--green2); }
+.btn-submit:disabled { background: var(--gray3); cursor: not-allowed; }
+
+.form-success { color: var(--green); font-size: .9rem; margin-top: .5rem; font-weight: 600; }
+.form-error   { color: var(--red);   font-size: .9rem; margin-top: .5rem; }
+
+/* Extra fields for Ausland */
+.extra-fields { display: none; }
+.extra-fields.visible { display: contents; }
+
+/* Tees radio group */
+.tees-group { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.tees-option { display: flex; align-items: center; gap: .3rem; cursor: pointer; font-size: .95rem; }
+.tees-option input[type=radio] { accent-color: var(--green); width: 1.1rem; height: 1.1rem; }
+
+/* HCP computed hint */
+.hcp-computed { background: var(--green3); border-radius: 8px; padding: .5rem .75rem; font-size: .85rem; color: var(--green); font-weight: 600; display: none; }
+.hcp-computed.visible { display: block; }
+
+/* ── Table ────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; min-width: 600px; }
+thead th {
+  background: var(--green); color: var(--white); padding: .6rem .75rem;
+  text-align: left; font-weight: 600; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--gray2); transition: background .15s; }
+tbody tr:hover { background: var(--green3); }
+tbody td { padding: .55rem .75rem; vertical-align: middle; }
+.badge-player {
+  display: inline-block; background: var(--green3); color: var(--green);
+  border-radius: 6px; padding: .1rem .5rem; font-weight: 700; font-size: .8rem;
+}
+.btn-delete {
+  background: none; border: 1px solid #fca5a5; color: var(--red);
+  border-radius: 6px; padding: .2rem .5rem; font-size: .78rem;
+  transition: background .2s;
+}
+.btn-delete:hover { background: #fee2e2; }
+
+/* Filter bar */
+.filter-bar { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.filter-bar select, .filter-bar input {
+  padding: .5rem .75rem; border: 2px solid var(--gray2); border-radius: 8px;
+  font-size: .9rem; min-width: 150px;
+}
+.filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: var(--green); }
+
+.empty-state { text-align: center; padding: 2rem; color: var(--gray4); font-size: .95rem; }
+.empty-state .icon { font-size: 2.5rem; margin-bottom: .5rem; }
+
+/* ── Responsive tweaks ────────────────────────────────────────── */
+@media(max-width: 400px) {
+  .topbar-title { font-size: 1rem; }
+  .tab-btn { padding: .65rem .9rem; font-size: .82rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Login Screen ─────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">⛳</div>
+    <h1>Golf Playing App</h1>
+    <p>Alle Runden — ein Passwort</p>
+    <input type="password" id="pw-input" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn-login" onclick="doLogin()">Einloggen</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── App Screen ───────────────────────────────────────────────────────── -->
+<div id="app-screen">
+  <div class="topbar">
+    <span class="topbar-title">⛳ Golf Playing App</span>
+    <button class="btn-logout" onclick="doLogout()">Abmelden</button>
+  </div>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-dashboard">📊 Dashboard</button>
+    <button class="tab-btn"        data-tab="tab-new">➕ Runde erfassen</button>
+    <button class="tab-btn"        data-tab="tab-rounds">📋 Alle Runden</button>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Runden total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-hcp">—</div>
+        <div class="stat-label">Bester HCP-Index</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-netto">—</div>
+        <div class="stat-label">Ø Netto-Punkte</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-phcp">—</div>
+        <div class="stat-label">Letztes Playing HCP</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Letzte Runden</div>
+      <div class="table-wrap">
+        <table id="dashboard-table">
+          <thead>
+            <tr>
+              <th>Spieler</th>
+              <th>Datum</th>
+              <th>Club</th>
+              <th>Tees</th>
+              <th>Strokes</th>
+              <th>Netto</th>
+              <th>HCP-Index</th>
+              <th>Playing HCP</th>
+            </tr>
+          </thead>
+          <tbody id="dashboard-tbody">
+            <tr><td colspan="8" class="empty-state"><div class="icon">🏌️</div>Noch keine Runden erfasst</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEUE RUNDE -->
+  <div id="tab-new" class="tab-content">
+    <div class="card">
+      <div class="card-title">➕ Neue Runde erfassen</div>
+      <form id="round-form" onsubmit="submitRound(event)">
+        <div class="form-grid">
+
+          <!-- Spieler -->
+          <div class="form-group">
+            <label for="f-player">Spieler *</label>
+            <select id="f-player" required>
+              <option value="">— Spieler wählen —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="f-player-new">Neuer Spieler (falls nicht in Liste)</label>
+            <input type="text" id="f-player-new" placeholder="Name eingeben…" />
+            <span class="hint">Wird beim Speichern automatisch hinzugefügt</span>
+          </div>
+
+          <!-- Datum -->
+          <div class="form-group">
+            <label for="f-date">Datum *</label>
+            <input type="date" id="f-date" required />
+          </div>
+
+          <!-- Tees -->
+          <div class="form-group">
+            <label>Tees *</label>
+            <div class="tees-group">
+              <label class="tees-option"><input type="radio" name="tees" value="Herren" checked /> Herren</label>
+              <label class="tees-option"><input type="radio" name="tees" value="Damen" /> Damen</label>
+            </div>
+          </div>
+
+          <!-- Club -->
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="f-club">Golfclub *</label>
+            <select id="f-club" required onchange="onClubChange()">
+              <option value="">— Club wählen —</option>
+            </select>
+          </div>
+
+          <!-- Extra fields for Ausland -->
+          <div class="form-group extra-fields" id="extra-cr">
+            <label for="f-cr">Course Rating (CR)</label>
+            <input type="number" id="f-cr" step="0.1" min="60" max="80" placeholder="z.B. 71.4" oninput="calcPlayingHCP()" />
+          </div>
+          <div class="form-group extra-fields" id="extra-slope">
+            <label for="f-slope">Slope</label>
+            <input type="number" id="f-slope" step="1" min="55" max="155" placeholder="z.B. 127" oninput="calcPlayingHCP()" />
+          </div>
+          <div class="form-group extra-fields" id="extra-par">
+            <label for="f-par">Par</label>
+            <input type="number" id="f-par" step="1" min="60" max="76" placeholder="z.B. 72" oninput="calcPlayingHCP()" />
+          </div>
+
+          <!-- Strokes -->
+          <div class="form-group">
+            <label for="f-strokes">Anzahl Strokes (18 Loch) *</label>
+            <input type="number" id="f-strokes" min="40" max="200" required placeholder="z.B. 92" />
+          </div>
+
+          <!-- Netto -->
+          <div class="form-group">
+            <label for="f-netto">Erzielte Netto-Punkte (Stableford) *</label>
+            <input type="number" id="f-netto" min="0" max="72" required placeholder="z.B. 36" />
+          </div>
+
+          <!-- HCP Index -->
+          <div class="form-group">
+            <label for="f-hcp">HCP-Index *</label>
+            <input type="number" id="f-hcp" step="0.1" min="0" max="54" required placeholder="z.B. 18.4" oninput="calcPlayingHCP()" />
+          </div>
+
+          <!-- Playing HCP -->
+          <div class="form-group">
+            <label for="f-phcp">Playing HCP *</label>
+            <input type="number" id="f-phcp" step="1" required placeholder="Wird automatisch berechnet" />
+            <div class="hcp-computed" id="hcp-formula-hint"></div>
+          </div>
+
+        </div>
+        <button type="submit" class="btn-submit" id="btn-save">Runde speichern</button>
+        <div class="form-success" id="form-success"></div>
+        <div class="form-error" id="form-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ALLE RUNDEN -->
+  <div id="tab-rounds" class="tab-content">
+    <div class="card">
+      <div class="card-title">📋 Alle Runden</div>
+      <div class="filter-bar">
+        <select id="filter-player" onchange="renderRoundsTable()">
+          <option value="">Alle Spieler</option>
+        </select>
+        <input type="text" id="filter-club" placeholder="Club filtern…" oninput="renderRoundsTable()" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Spieler</th>
+              <th>Datum</th>
+              <th>Club</th>
+              <th>Tees</th>
+              <th>Strokes</th>
+              <th>Netto</th>
+              <th>HCP-Index</th>
+              <th>Playing HCP</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rounds-tbody">
+            <tr><td colspan="9" class="empty-state"><div class="icon">🏌️</div>Noch keine Runden erfasst</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app-screen -->
+
+<script>
+// ── Club data ─────────────────────────────────────────────────────────────
+const CLUBS = [
+  {name:"Golf Club Zürich (Zumikon)", cr:72.1, slope:136, par:72},
+  {name:"Golf Club Schönenberg", cr:70.4, slope:125, par:71},
+  {name:"Golfpark Otelfingen", cr:69.8, slope:121, par:71},
+  {name:"Golf Club Zürichsee", cr:70.2, slope:123, par:72},
+  {name:"Golf Club Blumisberg", cr:72.3, slope:130, par:72},
+  {name:"Golf Club Lausanne", cr:71.5, slope:128, par:71},
+  {name:"Golf Club Genève", cr:71.8, slope:131, par:72},
+  {name:"Golf Club Crans-sur-Sierre", cr:71.2, slope:124, par:72},
+  {name:"Golf Club Davos", cr:68.5, slope:117, par:70},
+  {name:"Golf Club Arosa", cr:66.8, slope:115, par:68},
+  {name:"Golf Club Bad Ragaz", cr:71.4, slope:127, par:72},
+  {name:"Golf Club Lucerne", cr:70.8, slope:124, par:72},
+  {name:"Golf Club Basel", cr:70.5, slope:122, par:72},
+  {name:"Golf Club Rheinfelden", cr:70.2, slope:120, par:72},
+  {name:"Golf & Country Club Küssnacht", cr:70.6, slope:125, par:72},
+  {name:"Golf Club Lipperswil", cr:69.8, slope:118, par:71},
+  {name:"Golf Club Wallenried", cr:70.1, slope:122, par:71},
+  {name:"Golf Club Vuissens", cr:69.5, slope:119, par:71},
+  {name:"Golf Club Bürgenstock", cr:68.2, slope:116, par:70},
+  {name:"Golf Club Interlaken-Unterseen", cr:70.9, slope:126, par:72},
+  {name:"Golf Club Gstaad-Saanenland", cr:68.0, slope:113, par:70},
+  {name:"Golf Club Sempach", cr:70.3, slope:123, par:71},
+  {name:"Golf Club Wittnau", cr:69.6, slope:120, par:71},
+  {name:"Golf Club Ticino", cr:70.1, slope:121, par:71},
+  {name:"Ausland / Anderer Club", cr:null, slope:null, par:null}
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let allRounds = [];
+let allPlayers = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}.${m}.${y}`;
+}
+function fmtNum(n, dec=1) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toFixed(dec);
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  try {
+    const r = await fetch('/api/login', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    const d = await r.json();
+    if (d.ok) { showApp(); }
+    else { err.textContent = d.error || 'Falsches Passwort'; }
+  } catch(e) { err.textContent = 'Verbindungsfehler'; }
+}
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogout() {
+  await fetch('/api/logout', {method:'POST', credentials:'include'});
+  document.getElementById('app-screen').classList.remove('active');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+}
+
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').classList.add('active');
+  await Promise.all([loadPlayers(), loadRounds(), loadStats()]);
+  buildClubDropdown();
+  buildPlayerDropdown();
+  // Set default date to today
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+}
+
+// ── Tab nav ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Players ───────────────────────────────────────────────────────────────
+async function loadPlayers() {
+  const r = await fetch('/api/players', {credentials:'include'});
+  allPlayers = await r.json();
+  buildPlayerDropdown();
+}
+
+function buildPlayerDropdown() {
+  const sel = document.getElementById('f-player');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Spieler wählen —</option>';
+  allPlayers.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+
+  // Filter dropdown
+  const fp = document.getElementById('filter-player');
+  const fcur = fp.value;
+  fp.innerHTML = '<option value="">Alle Spieler</option>';
+  allPlayers.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    fp.appendChild(o);
+  });
+  if (fcur) fp.value = fcur;
+}
+
+// ── Clubs ─────────────────────────────────────────────────────────────────
+function buildClubDropdown() {
+  const sel = document.getElementById('f-club');
+  sel.innerHTML = '<option value="">— Club wählen —</option>';
+  CLUBS.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.name; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+}
+
+function onClubChange() {
+  const sel = document.getElementById('f-club');
+  const clubName = sel.value;
+  const isAbroad = clubName === 'Ausland / Anderer Club';
+  document.querySelectorAll('.extra-fields').forEach(el => {
+    el.classList.toggle('visible', isAbroad);
+    const inputs = el.querySelectorAll('input');
+    inputs.forEach(i => i.required = isAbroad);
+  });
+  if (!isAbroad) {
+    document.getElementById('f-cr').value = '';
+    document.getElementById('f-slope').value = '';
+    document.getElementById('f-par').value = '';
+  }
+  calcPlayingHCP();
+}
+
+// ── Playing HCP calculation ───────────────────────────────────────────────
+// Playing HCP = round(HCP_Index × (Slope / 113) + (Course_Rating - Par))
+function calcPlayingHCP() {
+  const hcpIndex = parseFloat(document.getElementById('f-hcp').value);
+  const clubName = document.getElementById('f-club').value;
+  const hint = document.getElementById('hcp-formula-hint');
+  const phcpInput = document.getElementById('f-phcp');
+
+  if (!clubName || isNaN(hcpIndex)) {
+    hint.classList.remove('visible');
+    return;
+  }
+
+  let cr, slope, par;
+  if (clubName === 'Ausland / Anderer Club') {
+    cr    = parseFloat(document.getElementById('f-cr').value);
+    slope = parseFloat(document.getElementById('f-slope').value);
+    par   = parseInt(document.getElementById('f-par').value);
+  } else {
+    const club = CLUBS.find(c => c.name === clubName);
+    if (!club || club.cr === null) { hint.classList.remove('visible'); return; }
+    cr = club.cr; slope = club.slope; par = club.par;
+  }
+
+  if (isNaN(cr) || isNaN(slope) || isNaN(par)) {
+    hint.classList.remove('visible');
+    return;
+  }
+
+  const raw = hcpIndex * (slope / 113) + (cr - par);
+  const phcp = Math.round(raw);
+  phcpInput.value = phcp;
+  hint.textContent = `Berechnet: ${hcpIndex} × (${slope}/113) + (${cr}−${par}) = ${raw.toFixed(2)} → ${phcp}`;
+  hint.classList.add('visible');
+}
+
+// ── Rounds ────────────────────────────────────────────────────────────────
+async function loadRounds() {
+  const r = await fetch('/api/rounds', {credentials:'include'});
+  allRounds = await r.json();
+  renderDashboardTable();
+  renderRoundsTable();
+}
+
+async function loadStats() {
+  const r = await fetch('/api/stats', {credentials:'include'});
+  const d = await r.json();
+  document.getElementById('stat-total').textContent = d.total_rounds ?? '0';
+  document.getElementById('stat-hcp').textContent   = d.best_hcp_index !== null ? fmtNum(d.best_hcp_index) : '—';
+  document.getElementById('stat-netto').textContent = d.avg_netto_points !== null ? fmtNum(d.avg_netto_points) : '—';
+  document.getElementById('stat-phcp').textContent  = d.last_playing_hcp !== null ? d.last_playing_hcp : '—';
+}
+
+function roundRow(r, withDelete) {
+  return `<tr>
+    <td><span class="badge-player">${r.player}</span></td>
+    <td>${fmtDate(r.round_date)}</td>
+    <td style="max-width:160px;white-space:normal;font-size:.82rem;">${r.club}</td>
+    <td>${r.tees || 'Herren'}</td>
+    <td>${r.strokes ?? '—'}</td>
+    <td><strong>${r.netto_points ?? '—'}</strong></td>
+    <td>${fmtNum(r.hcp_index)}</td>
+    <td><strong>${r.playing_hcp ?? '—'}</strong></td>
+    ${withDelete ? `<td><button class="btn-delete" onclick="deleteRound(${r.id})">🗑</button></td>` : ''}
+  </tr>`;
+}
+
+function renderDashboardTable() {
+  const tbody = document.getElementById('dashboard-tbody');
+  const recent = allRounds.slice(0, 20);
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">🏌️</div>Noch keine Runden erfasst</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.map(r => roundRow(r, false)).join('');
+}
+
+function renderRoundsTable() {
+  const filterPlayer = document.getElementById('filter-player').value;
+  const filterClub   = document.getElementById('filter-club').value.toLowerCase().trim();
+  const tbody = document.getElementById('rounds-tbody');
+
+  let rows = allRounds;
+  if (filterPlayer) rows = rows.filter(r => r.player === filterPlayer);
+  if (filterClub)   rows = rows.filter(r => r.club.toLowerCase().includes(filterClub));
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">🏌️</div>Keine Runden gefunden</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => roundRow(r, true)).join('');
+}
+
+async function deleteRound(id) {
+  if (!confirm('Diese Runde wirklich löschen?')) return;
+  await fetch(`/api/rounds/${id}`, {method:'DELETE', credentials:'include'});
+  await Promise.all([loadRounds(), loadStats()]);
+}
+
+// ── Submit new round ──────────────────────────────────────────────────────
+async function submitRound(e) {
+  e.preventDefault();
+  const success = document.getElementById('form-success');
+  const error   = document.getElementById('form-error');
+  const btn     = document.getElementById('btn-save');
+  success.textContent = '';
+  error.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Speichern…';
+
+  // Player: prefer custom new name
+  const playerSel = document.getElementById('f-player').value;
+  const playerNew = document.getElementById('f-player-new').value.trim();
+  const player = playerNew || playerSel;
+  if (!player) { error.textContent = 'Bitte Spieler wählen oder Namen eingeben.'; btn.disabled=false; btn.textContent='Runde speichern'; return; }
+
+  const clubName = document.getElementById('f-club').value;
+  const isAbroad = clubName === 'Ausland / Anderer Club';
+  let cr    = null, slope = null, par = null;
+  if (isAbroad) {
+    cr    = parseFloat(document.getElementById('f-cr').value);
+    slope = parseFloat(document.getElementById('f-slope').value);
+    par   = parseInt(document.getElementById('f-par').value);
+  } else {
+    const club = CLUBS.find(c => c.name === clubName);
+    if (club && club.cr !== null) { cr = club.cr; slope = club.slope; par = club.par; }
+  }
+
+  const tees = document.querySelector('input[name="tees"]:checked').value;
+
+  const payload = {
+    player,
+    round_date:   document.getElementById('f-date').value,
+    club:         clubName,
+    cr, slope, par, tees,
+    strokes:      parseInt(document.getElementById('f-strokes').value),
+    netto_points: parseInt(document.getElementById('f-netto').value),
+    hcp_index:    parseFloat(document.getElementById('f-hcp').value),
+    playing_hcp:  parseInt(document.getElementById('f-phcp').value)
+  };
+
+  try {
+    const r = await fetch('/api/rounds', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      success.textContent = '✅ Runde gespeichert!';
+      document.getElementById('round-form').reset();
+      document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+      document.querySelectorAll('.extra-fields').forEach(el => el.classList.remove('visible'));
+      document.getElementById('hcp-formula-hint').classList.remove('visible');
+      buildClubDropdown();
+      await Promise.all([loadPlayers(), loadRounds(), loadStats()]);
+    } else {
+      error.textContent = d.error || 'Fehler beim Speichern.';
+    }
+  } catch(ex) {
+    error.textContent = 'Verbindungsfehler.';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Runde speichern';
+}
+
+// ── Init: check existing session ──────────────────────────────────────────
+(async function() {
+  const r = await fetch('/api/check_session', {credentials:'include'});
+  const d = await r.json();
+  if (d.logged_in) { showApp(); }
+})();
+</script>
+</body>
+</html>
